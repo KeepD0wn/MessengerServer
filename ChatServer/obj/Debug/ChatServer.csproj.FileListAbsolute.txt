@@ -1,0 +1,6 @@
+C:\Users\gvozd\source\repos\ChatServer\ChatServer\bin\Debug\ChatServer.exe.config
+C:\Users\gvozd\source\repos\ChatServer\ChatServer\bin\Debug\ChatServer.exe
+C:\Users\gvozd\source\repos\ChatServer\ChatServer\bin\Debug\ChatServer.pdb
+C:\Users\gvozd\source\repos\ChatServer\ChatServer\obj\Debug\ChatServer.csprojAssemblyReference.cache
+C:\Users\gvozd\source\repos\ChatServer\ChatServer\obj\Debug\ChatServer.exe
+C:\Users\gvozd\source\repos\ChatServer\ChatServer\obj\Debug\ChatServer.pdb
