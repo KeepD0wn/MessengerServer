@@ -11,7 +11,7 @@ namespace ChatServer
 {
     class ClientCommands
     {
-        public event Mes MsgSendEvent;
+        public event Mes MsgSendedEvent;
         
         public void AddMessage(SqlConnection connect, string name, string message)
         {
@@ -24,13 +24,13 @@ namespace ChatServer
             }
             Console.WriteLine("{"+name+"}"+" send message: "+message);
 
-            if (MsgSendEvent != null)
+            if (MsgSendedEvent != null)
             {
-                MsgSendEvent(name,message);
+                MsgSendedEvent(name,message);
             }
         }
 
-        public void OnMessageSended(string name, string message)
+        public void SendMessageToClients(string name, string message)
         {
             foreach (ClientClass c in Program.clients)
             {
@@ -83,7 +83,7 @@ namespace ChatServer
                         byte[] buffer = Encoding.UTF8.GetBytes(message);
                         stream.Write(buffer, 0, buffer.Length);
                         Console.WriteLine("{" + name + "}" + " just entred with password: " + password);
-                        MsgSendEvent += OnMessageSended;
+                        MsgSendedEvent += SendMessageToClients;
                         return name;
                     }
                     else
@@ -122,10 +122,10 @@ namespace ChatServer
             string message = $"{Program.data.Count}"; //отвечаем сколько сообщений надо прочитать
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             stream.Write(buffer, 0, buffer.Length);
-
+                        
             for (int i = 0; i < Program.data.Count; i++)
             {
-                Thread.Sleep(5); //если не усыплять, то клиент не будет успевать обрабатывать 
+                Thread.Sleep(50); //если не усыплять, то клиент не будет успевать обрабатывать | чем медлнее комп, тем больше задержка
                 string message2 = $"3:{Program.data[i][0]}:{Program.data[i][1]}";
                 byte[] buffer2 = Encoding.UTF8.GetBytes(message2);
                 stream.Write(buffer2, 0, buffer2.Length);
