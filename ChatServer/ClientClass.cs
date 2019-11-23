@@ -12,18 +12,25 @@ using System.IO;
 namespace ChatServer
 {
     delegate void Mes(string name,string mes);
+    delegate void VoiceMes();
     class ClientClass:ClientCommands
     {
         public TcpClient client;
-        SqlConnection connect = null;
+        public TcpClient clientVoice;
+                
+        NetworkStream streamVoice = null;
         NetworkStream stream = null;
-        public string Login { get; set; }
-        public SqlConnection ConnectProperty { get => connect; set => connect = value; }
-        public NetworkStream Stream { get => stream; set => stream = value; }        
 
-        public ClientClass(TcpClient client)
+        public string Login { get; set; }
+        public SqlConnection ConnectSQLProperty { get; set; }
+        public NetworkStream Stream { get => stream; set => stream = value; }
+        public NetworkStream StreamVoice{ get => streamVoice; set => streamVoice = value; }
+
+        public ClientClass(TcpClient client,TcpClient clientVoice,SqlConnection connect)
         {
             this.client = client;
+            this.clientVoice = clientVoice;
+            ConnectSQLProperty = connect;
         }
 
         public void Connect()
@@ -31,8 +38,7 @@ namespace ChatServer
             try
             {
                 Stream = client.GetStream();
-                ConnectProperty = new SqlConnection("Server=31.31.196.89; Database=u0805163_2iq; User Id=u0805163_user1; Password=!123qwe; MultipleActiveResultSets=True;");
-                ConnectProperty.Open();
+                StreamVoice = clientVoice.GetStream();
 
                 while (true)
                 {
@@ -45,20 +51,25 @@ namespace ChatServer
 
                     string msgWrite = Encoding.UTF8.GetString(IncomingMessage).TrimEnd('\0');
                     string[] words = msgWrite.Split(new char[] { ':', '&','#',':' }, StringSplitOptions.RemoveEmptyEntries); //разделяем пришедшую команду
+                    Console.WriteLine(msgWrite);
 
                     switch (words[0])
                     {
                         case "0":
-                            AddUser(ConnectProperty,Stream, words[1], words[2]);
+                            AddUser(ConnectSQLProperty,Stream, words[1], words[2]);
                             break;
                         case "1":
-                            AddMessage(ConnectProperty, words[1], words[2]);
+                            AddMessage(ConnectSQLProperty, words[1], words[2]);
                             break;
                         case "2":
-                           Login= ConfirmUserData(ConnectProperty, Stream, words[1], words[2]);
+                           Login= ConfirmUserData(ConnectSQLProperty, Stream, words[1], words[2]);
                             break;
                         case "3":
-                            SendAllMessages(ConnectProperty, Stream);
+                            SendAllMessages(ConnectSQLProperty, Stream);
+                            break;
+                        case "6":
+                            Thread myThread = new Thread(new ParameterizedThreadStart(AddVoiceMessage));
+                            myThread.Start(StreamVoice);
                             break;
                     }
                 }
@@ -80,6 +91,10 @@ namespace ChatServer
                 client.Close();
             if (Stream != null)
                 Stream.Close();
+            if (clientVoice != null)
+                clientVoice.Close();
+            if (streamVoice != null)
+                streamVoice.Close();
         }
     }
 }
