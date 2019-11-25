@@ -21,7 +21,7 @@ namespace ChatServer
         NetworkStream streamVoice = null;
         NetworkStream stream = null;
 
-        public string Login { get; set; }
+        public static string Login { get; set; }
         public SqlConnection ConnectSQLProperty { get; set; }
         public NetworkStream Stream { get => stream; set => stream = value; }
         public NetworkStream StreamVoice{ get => streamVoice; set => streamVoice = value; }
@@ -35,10 +35,13 @@ namespace ChatServer
 
         public void Connect()
         {
+            Thread myThread = new Thread(new ParameterizedThreadStart(AddVoiceMessage));
+            
             try
             {
                 Stream = client.GetStream();
                 StreamVoice = clientVoice.GetStream();
+                myThread.Start(StreamVoice);
 
                 while (true)
                 {
@@ -66,11 +69,7 @@ namespace ChatServer
                             break;
                         case "3":
                             SendAllMessages(ConnectSQLProperty, Stream);
-                            break;
-                        case "6":
-                            Thread myThread = new Thread(new ParameterizedThreadStart(AddVoiceMessage));
-                            myThread.Start(StreamVoice);
-                            break;
+                            break;                        
                     }
                 }
             }
@@ -80,6 +79,7 @@ namespace ChatServer
             }
             finally
             {
+                myThread.Abort();
                 Disconnect();                
                 Program.clients.Remove(this);
             }

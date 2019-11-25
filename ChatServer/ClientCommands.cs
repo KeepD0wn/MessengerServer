@@ -75,42 +75,49 @@ namespace ChatServer
         }
 
         public void AddVoiceMessage(object st)
-        {            
-            NetworkStream stream = (NetworkStream)st;
-            int bufferSize = 1024;
-            int bytesRead = 0;
-            int allBytesRead = 0;
-
-            try
+        {
+            while (true)
             {
-                byte[] length = new byte[4];
-                bytesRead = stream.Read(length, 0, 4); //записываем размер файла 
-                int fileLength = BitConverter.ToInt32(length, 0);
+                NetworkStream stream = (NetworkStream)st;
+                int bufferSize = 1024;
+                int bytesRead = 0;
+                int allBytesRead = 0;
 
-                int bytesLeft = fileLength;
-                byte[] data = new byte[fileLength];
-
-                while (bytesLeft > 0)
+                try
                 {
+                    byte[] length = new byte[4];
+                    bytesRead = stream.Read(length, 0, 4); //записываем размер файла, если никто не передаёт войс, то здесь остановка пока не отправят
+                    int fileLength = BitConverter.ToInt32(length, 0);
 
-                    int PacketSize = (bytesLeft > bufferSize) ? bufferSize : bytesLeft;
+                    int bytesLeft = fileLength;
+                    byte[] data = new byte[fileLength];
 
-                    bytesRead = stream.Read(data, allBytesRead, PacketSize);
-                    allBytesRead += bytesRead;
-                    bytesLeft -= bytesRead;
+                    while (bytesLeft > 0)
+                    {
 
+                        int PacketSize = (bytesLeft > bufferSize) ? bufferSize : bytesLeft;
+
+                        bytesRead = stream.Read(data, allBytesRead, PacketSize);
+                        allBytesRead += bytesRead;
+                        bytesLeft -= bytesRead;
+
+                    }
+
+                    File.WriteAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav", data);
+
+                    if (VoiceMsgSendedEvent != null)
+                    {
+                        VoiceMsgSendedEvent();
+                    }
+                    if (MsgSendedEvent != null)
+                    {
+                        MsgSendedEvent($"{ClientClass.Login}","отправил ");
+                    }
                 }
-
-                File.WriteAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav", data);
-
-                if (VoiceMsgSendedEvent != null)
+                catch
                 {
-                    VoiceMsgSendedEvent();
+                    Console.WriteLine("Ошибка в чтении голосовго сообщения с клиента.");
                 }
-            }
-            catch
-            {
-                Console.WriteLine("не удалось записать голосовое сообщение на сервер");
             }
         }
 
