@@ -13,8 +13,8 @@ namespace ChatServer
 {
     class ClientCommands
     {
-        public event Mes MsgSendedEvent;
-        public event VoiceMes VoiceMsgSendedEvent;
+        public event Mes MsgSendEvent;
+        public event VoiceMes VoiceMsgSendEvent;
 
         public void AddMessage(SqlConnection connect, string name, string message)
         {
@@ -27,13 +27,10 @@ namespace ChatServer
             }
             Console.WriteLine("{"+name+"}"+" send message: "+message);
 
-            if (MsgSendedEvent != null)
-            {
-                MsgSendedEvent(name,message);
-            }
+            MsgSendEvent?.Invoke(name, message);
         }
 
-        public void SendMessageToClients(string name, string message)
+        public void SendMessageToClients(string name, string message) //событие
         {
             foreach (ClientClass c in Program.clients)
             {
@@ -43,8 +40,8 @@ namespace ChatServer
             }
         }
 
-        public void SendVoiceMessageToClients()
-        {           
+        public void SendVoiceMessageToClients() //событие
+        {
             foreach (ClientClass c in Program.clients)
             {
                 string messageToClient = $"5:&#:";
@@ -74,17 +71,17 @@ namespace ChatServer
             }
         }
 
-        public void AddVoiceMessage(object st)
+        public void AddVoiceMessage(object st) //поток
         {
-            while (true)
+            try
             {
-                NetworkStream stream = (NetworkStream)st;
-                int bufferSize = 1024;
-                int bytesRead = 0;
-                int allBytesRead = 0;
-
-                try
+                while (true)
                 {
+                    NetworkStream stream = (NetworkStream)st;
+                    int bufferSize = 1024;
+                    int bytesRead = 0;
+                    int allBytesRead = 0;
+
                     byte[] length = new byte[4];
                     bytesRead = stream.Read(length, 0, 4); //записываем размер файла, если никто не передаёт войс, то здесь остановка пока не отправят
                     int fileLength = BitConverter.ToInt32(length, 0);
@@ -105,20 +102,15 @@ namespace ChatServer
 
                     File.WriteAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav", data);
 
-                    if (VoiceMsgSendedEvent != null)
-                    {
-                        VoiceMsgSendedEvent();
-                    }
-                    if (MsgSendedEvent != null)
-                    {
-                        MsgSendedEvent($"{ClientClass.Login}","отправил ");
-                    }
-                }
-                catch
-                {
-                    Console.WriteLine("Ошибка в чтении голосовго сообщения с клиента.");
+                    VoiceMsgSendEvent?.Invoke();
+                    MsgSendEvent?.Invoke(ClientClass.Login, "отправил голосовое сообщение!");
                 }
             }
+            catch
+            {
+
+            }
+           
         }
 
         public void AddUser(SqlConnection connect,NetworkStream stream, string name, string password)
@@ -167,8 +159,8 @@ namespace ChatServer
                             stream.Write(buffer, 0, buffer.Length);
                             Console.WriteLine("{" + name + "}" + " just entred with password: " + password);
 
-                            MsgSendedEvent += SendMessageToClients;
-                            VoiceMsgSendedEvent += SendVoiceMessageToClients;
+                            MsgSendEvent += SendMessageToClients;
+                            VoiceMsgSendEvent += SendVoiceMessageToClients;
                             return name;
                         }
                         else

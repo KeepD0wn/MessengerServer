@@ -25,6 +25,7 @@ namespace ChatServer
         public SqlConnection ConnectSQLProperty { get; set; }
         public NetworkStream Stream { get => stream; set => stream = value; }
         public NetworkStream StreamVoice{ get => streamVoice; set => streamVoice = value; }
+        Thread myThread;
 
         public ClientClass(TcpClient client,TcpClient clientVoice,SqlConnection connect)
         {
@@ -35,10 +36,9 @@ namespace ChatServer
 
         public void Connect()
         {
-            Thread myThread = new Thread(new ParameterizedThreadStart(AddVoiceMessage));
-            
             try
             {
+                myThread = new Thread(new ParameterizedThreadStart(AddVoiceMessage));
                 Stream = client.GetStream();
                 StreamVoice = clientVoice.GetStream();
                 myThread.Start(StreamVoice);
@@ -65,7 +65,7 @@ namespace ChatServer
                             AddMessage(ConnectSQLProperty, words[1], words[2]);
                             break;
                         case "2":
-                           Login= ConfirmUserData(ConnectSQLProperty, Stream, words[1], words[2]);
+                           Login= ConfirmUserData(ConnectSQLProperty, Stream, words[1], words[2]);                            
                             break;
                         case "3":
                             SendAllMessages(ConnectSQLProperty, Stream);
@@ -79,14 +79,14 @@ namespace ChatServer
             }
             finally
             {
-                myThread.Abort();
-                Disconnect();                
+                Disconnect();
                 Program.clients.Remove(this);
             }
         }
 
         public void Disconnect()
         {
+            myThread.Abort();
             if (client != null)
                 client.Close();
             if (Stream != null)
@@ -94,7 +94,7 @@ namespace ChatServer
             if (clientVoice != null)
                 clientVoice.Close();
             if (streamVoice != null)
-                streamVoice.Close();
+                streamVoice.Close();            
         }
     }
 }
