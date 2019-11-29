@@ -24,8 +24,7 @@ namespace ChatServer
         public static string Login { get; set; }
         public SqlConnection ConnectSQLProperty { get; set; }
         public NetworkStream Stream { get => stream; set => stream = value; }
-        public NetworkStream StreamVoice{ get => streamVoice; set => streamVoice = value; }
-        Thread myThread;
+        public NetworkStream StreamVoice{ get => streamVoice; set => streamVoice = value; }        
 
         public ClientClass(TcpClient client,TcpClient clientVoice,SqlConnection connect)
         {
@@ -37,11 +36,10 @@ namespace ChatServer
         public void Connect()
         {
             try
-            {
-                myThread = new Thread(new ParameterizedThreadStart(AddVoiceMessage));
+            {               
                 Stream = client.GetStream();
                 StreamVoice = clientVoice.GetStream();
-                myThread.Start(StreamVoice);
+                AddVoiceMessageAsync(StreamVoice);              
 
                 while (true)
                 {
@@ -86,7 +84,6 @@ namespace ChatServer
 
         public void Disconnect()
         {
-            myThread.Abort();
             if (client != null)
                 client.Close();
             if (Stream != null)

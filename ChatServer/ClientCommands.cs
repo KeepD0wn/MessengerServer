@@ -71,7 +71,7 @@ namespace ChatServer
             }
         }
 
-        public void AddVoiceMessage(object st) //поток
+        public  void AddVoiceMessage(object st) //поток
         {
             try
             {
@@ -108,9 +108,13 @@ namespace ChatServer
             }
             catch
             {
+                
+            }           
+        }
 
-            }
-           
+        public async void AddVoiceMessageAsync(object st)
+        {
+            await Task.Run(()=>AddVoiceMessage(st));
         }
 
         public void AddUser(SqlConnection connect,NetworkStream stream, string name, string password)
