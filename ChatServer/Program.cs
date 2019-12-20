@@ -13,8 +13,7 @@ using System.Reflection;
 namespace ChatServer
 {
     class Program
-    {                
-        public static List<string[]> data = new List<string[]>();
+    {
         public static List<ClientClass> clients = new List<ClientClass>();
         static SqlConnection connect = new SqlConnection("Server=31.31.196.89; Database=u0805163_2iq; User Id=u0805163_user1; Password=!123qwe; MultipleActiveResultSets=True;");
 
@@ -38,15 +37,7 @@ namespace ChatServer
 
                 while (true)
                 {
-                    TcpClient client = server.AcceptTcpClient(); //ждём клиента
-                    TcpClient clientVoice = serverVoice.AcceptTcpClient();
-
-                    ClientClass newClient = new ClientClass(client,clientVoice,connect);
-                    clients.Add(newClient);
-                    Console.WriteLine("New client");  
-                    
-                    Thread clientThread = new Thread(new ThreadStart(newClient.Connect));
-                    clientThread.Start();
+                    CreateAndStartClient(server, serverVoice);
                 }
             }
             catch (Exception ex)
@@ -59,6 +50,24 @@ namespace ChatServer
                     server.Stop();
             }
             
+        }
+
+        private static void CreateAndStartClient(TcpListener server, TcpListener serverVoice)
+        {
+            TcpClient client = server.AcceptTcpClient(); //ждём клиента
+            TcpClient clientVoice = serverVoice.AcceptTcpClient();
+            ClientClass newClient = CreateClient(client, clientVoice);
+
+            Thread clientThread = new Thread(new ThreadStart(newClient.Connect));
+            clientThread.Start();
+        }
+
+        private static ClientClass CreateClient(TcpClient client, TcpClient clientVoice)
+        {
+            ClientClass newClient = new ClientClass(client, clientVoice, connect);
+            clients.Add(newClient);
+            Console.WriteLine("New client");
+            return newClient;
         }
     }
 }

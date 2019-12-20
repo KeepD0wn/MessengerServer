@@ -11,10 +11,15 @@ using System.Xml.Serialization;
 
 namespace ChatServer
 {
+    delegate void Mes(string name, string mes);
+    delegate void VoiceMes();
     class ClientCommands
     {
         public event Mes MsgSendEvent;
         public event VoiceMes VoiceMsgSendEvent;
+        public List<string[]> data = new List<string[]>();
+        protected Program program = new Program();
+        ClientClass client;
 
         public void AddMessage(SqlConnection connect, string name, string message)
         {
@@ -103,7 +108,7 @@ namespace ChatServer
                     File.WriteAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav", data);
 
                     VoiceMsgSendEvent?.Invoke();
-                    MsgSendEvent?.Invoke(ClientClass.Login, "отправил голосовое сообщение!");
+                    MsgSendEvent?.Invoke(client.Login, "отправил голосовое сообщение!");
                 }
             }
             catch
@@ -187,16 +192,16 @@ namespace ChatServer
 
         public void SendAllMessages(SqlConnection connect, NetworkStream stream)
         {
-            Program.data.Clear();
+            data.Clear();
             string qu = "select * from MessengerMessege"; //читаем БД и заносим все сообщения в лист
             using (SqlCommand com = new SqlCommand(qu, connect))
             {
                 SqlDataReader reader = com.ExecuteReader();
                 while (reader.Read())
                 {
-                    Program.data.Add(new string[2]); 
-                    Program.data[Program.data.Count - 1][0] = reader[1].ToString(); //ник
-                    Program.data[Program.data.Count - 1][1] = reader[2].ToString(); //сообщение
+                    data.Add(new string[2]); 
+                    data[data.Count - 1][0] = reader[1].ToString(); //ник
+                    data[data.Count - 1][1] = reader[2].ToString(); //сообщение
                 }
                 reader.Close();
             }
@@ -204,7 +209,7 @@ namespace ChatServer
             XmlSerializer ser = new XmlSerializer(typeof(List<string[]>)); //сериализуем лист с сообщениями
             string path = $"C:\\Users\\{Environment.UserName}\\Desktop\\txtM.txt";
             FileStream fileM = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-            ser.Serialize(fileM, Program.data);
+            ser.Serialize(fileM, data);
             fileM.Close();
                         
             byte[] file = File.ReadAllBytes(path); 
