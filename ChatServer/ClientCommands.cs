@@ -74,6 +74,7 @@ namespace ChatServer
                     bytesLeft -= packetSize;
                 }
             }
+            Console.WriteLine("Server sent voice messages to clients");
         }
 
         public  void AddVoiceMessage(object st) //поток
@@ -108,12 +109,13 @@ namespace ChatServer
                     File.WriteAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav", data);
 
                     VoiceMsgSendEvent?.Invoke();
-                    MsgSendEvent?.Invoke(client.Login, "отправил голосовое сообщение!");
+                    //MsgSendEvent(client.Login, "отправил голосовое сообщение!");
+                   // SendMessageToClients(client.Login, " отправил голосовое сообщение!");
                 }
             }
-            catch
+            catch(Exception ex)
             {
-                
+                Console.WriteLine(ex.Message);
             }           
         }
 

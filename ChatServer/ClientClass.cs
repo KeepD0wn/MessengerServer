@@ -15,7 +15,7 @@ namespace ChatServer
     {
         public TcpClient client;
         public TcpClient clientVoice;
-        ClientCommands Commands = new ClientCommands();
+        ClientCommands commands = new ClientCommands();
 
         public string Login { get; set; }
         public SqlConnection ConnectSQLProperty { get; set; }
@@ -35,7 +35,7 @@ namespace ChatServer
             {               
                 Stream = client.GetStream();
                 StreamVoice = clientVoice.GetStream();
-                Commands.AddVoiceMessageAsync(StreamVoice);              
+                commands.AddVoiceMessageAsync(StreamVoice);              
 
                 while (true)
                 {
@@ -59,16 +59,16 @@ namespace ChatServer
             switch (words[0])
             {
                 case "0":
-                    Commands.AddUser(ConnectSQLProperty, Stream, words[1], words[2]);
+                    commands.AddUser(ConnectSQLProperty, Stream, words[1], words[2]);
                     break;
                 case "1":
-                    Commands.AddMessage(ConnectSQLProperty, words[1], words[2]);
+                    commands.AddMessage(ConnectSQLProperty, words[1], words[2]);
                     break;
                 case "2":
-                    Login = Commands.ConfirmUserData(ConnectSQLProperty, Stream, words[1], words[2]);
+                    Login = commands.ConfirmUserData(ConnectSQLProperty, Stream, words[1], words[2]);
                     break;
                 case "3":
-                    Commands.SendAllMessages(ConnectSQLProperty, Stream);
+                    commands.SendAllMessages(ConnectSQLProperty, Stream);
                     break;
             }
         }
