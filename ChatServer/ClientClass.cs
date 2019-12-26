@@ -10,8 +10,19 @@ using System.Data.SqlClient;
 using System.IO;
 
 namespace ChatServer
-{    
-    class ClientClass
+{
+    struct User
+    {
+        public string id;
+        public string login;
+        public User(string login, string id)
+        {
+            this.login = login;
+            this.id = id;
+        }
+    }
+
+    public class ClientClass
     {
         public TcpClient client;
         public TcpClient clientVoice;
@@ -39,7 +50,7 @@ namespace ChatServer
 
                 while (true)
                 {
-                    string[] words = GetConfirmLine();
+                    string[] words = GetClientAnswer();
                     CompareData(words);
                 }
             }
@@ -73,13 +84,13 @@ namespace ChatServer
             }
         }
 
-        private string[] GetConfirmLine()
+        private string[] GetClientAnswer()
         {
-            byte[] IncomingMessage = GetServerAnswer();
-            return DecodeServerAnswer(IncomingMessage);
+            byte[] IncomingMessage = GetByteClientAnswer();
+            return DecodeClientAnswer(IncomingMessage);
         }
 
-        private static string[] DecodeServerAnswer(byte[] IncomingMessage)
+        private static string[] DecodeClientAnswer(byte[] IncomingMessage)
         {
             string msgWrite = Encoding.UTF8.GetString(IncomingMessage).TrimEnd('\0');
             string[] words = msgWrite.Split(new char[] { ':', '&', '#', ':' }, StringSplitOptions.RemoveEmptyEntries); //разделяем пришедшую команду
@@ -87,7 +98,7 @@ namespace ChatServer
             return words;
         }
 
-        private byte[] GetServerAnswer()
+        private byte[] GetByteClientAnswer()
         {
             byte[] IncomingMessage = new byte[256];
             do
@@ -98,7 +109,7 @@ namespace ChatServer
             return IncomingMessage;
         }
 
-        public void Disconnect()
+        private void Disconnect()
         {
             if (client != null)
                 client.Close();

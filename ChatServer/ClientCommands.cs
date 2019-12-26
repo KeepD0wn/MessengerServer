@@ -13,14 +13,13 @@ namespace ChatServer
 {
     delegate void Mes(string name, string mes);
     delegate void VoiceMes();
-    class ClientCommands
+    public class ClientCommands
     {
-        public event Mes MsgSendEvent;
-        public event VoiceMes VoiceMsgSendEvent;
+        event Mes MsgSendEvent;
+        event VoiceMes VoiceMsgSendEvent;
         public List<string[]> data = new List<string[]>();
-        protected Program program = new Program();
-        ClientClass client;
-
+        User user;
+        
         public void AddMessage(SqlConnection connect, string name, string message)
         {
             string sql = string.Format("Insert into MessengerMessege (MessegeUserName,MessegeText,MessegeDate) values (@login , @txt , GETDATE());");
@@ -35,7 +34,7 @@ namespace ChatServer
             MsgSendEvent?.Invoke(name, message);
         }
 
-        public void SendMessageToClients(string name, string message) //событие
+        private void OnSendMessageToClients(string name, string message) 
         {
             foreach (ClientClass c in Program.clients)
             {
@@ -45,39 +44,16 @@ namespace ChatServer
             }
         }
 
-        public void SendVoiceMessageToClients() //событие
+        private void OnSendVoiceMessageToClients() 
         {
             foreach (ClientClass c in Program.clients)
             {
-                string messageToClient = $"5:&#:";
-                byte[] buffer = Encoding.UTF8.GetBytes(messageToClient);
-                c.Stream.Write(buffer, 0, buffer.Length);
-
-                int bufferSize = 1024;
-
-                byte[] file = File.ReadAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav");
-                byte[] fileLength = BitConverter.GetBytes(file.Length); //4 байта
-                byte[] package = new byte[4 + file.Length];
-                fileLength.CopyTo(package, 0);
-                file.CopyTo(package, 4); //начиная с 5 байта пишем файл
-
-                int bytesSent = 0; //отталкиваемся с какого байта отправлять
-                int bytesLeft = package.Length; //смотрим сколько осталось
-
-                while (bytesLeft > 0)
-                {
-
-                    int packetSize = (bytesLeft > bufferSize) ? bufferSize : bytesLeft; //если больше отправляем 1024, если меньше то остаток
-
-                    c.StreamVoice.Write(package, bytesSent, packetSize);
-                    bytesSent += packetSize;
-                    bytesLeft -= packetSize;
-                }
+                SendFile($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav",c.StreamVoice);
             }
             Console.WriteLine("Server sent voice messages to clients");
         }
 
-        public  void AddVoiceMessage(object st) //поток
+        private void AddVoiceMessage(object st) //поток
         {
             try
             {
@@ -108,14 +84,12 @@ namespace ChatServer
 
                     File.WriteAllBytes($"C:\\Users\\{Environment.UserName}\\Desktop\\ClientSoundMes.wav", data);
 
-                    VoiceMsgSendEvent?.Invoke();
-                    //MsgSendEvent(client.Login, "отправил голосовое сообщение!");
-                   // SendMessageToClients(client.Login, " отправил голосовое сообщение!");
+                    VoiceMsgSendEvent?.Invoke();                   
+                    MsgSendEvent(user.login, "отправил голосовое сообщение!");
                 }
             }
-            catch(Exception ex)
+            catch
             {
-                Console.WriteLine(ex.Message);
             }           
         }
 
@@ -137,17 +111,13 @@ namespace ChatServer
                 }
 
                 //если что-то не так, то вызывается ошибка и код ниже не работает
-                string message = $"0:&#:confirmed";
-                byte[] buffer = Encoding.UTF8.GetBytes(message);
-                stream.Write(buffer, 0, buffer.Length);
+                Send(stream,"0", "confirmed");
 
                 Console.WriteLine("{" + name + "}" + " was added with password: " + password);
             }
             catch
             {
-                string message = $"0:&#:unconfirmed";
-                byte[] buffer = Encoding.UTF8.GetBytes(message);
-                stream.Write(buffer, 0, buffer.Length);
+                Send(stream, "0", "unconfirmed");
             }            
         }               
 
@@ -165,27 +135,23 @@ namespace ChatServer
                         viewed += 1;
                         if (password == reader[2].ToString())
                         {
-                            string message = $"2:&#:confirmed:&#:{viewed}:&#:{reader[0].ToString()}:&#:{reader[1].ToString()}:&#:{reader[2].ToString()}";
-                            byte[] buffer = Encoding.UTF8.GetBytes(message);
-                            stream.Write(buffer, 0, buffer.Length);
+                            string id = reader[0].ToString();
+                            Send(stream,"2", "confirmed",id,name,password);
                             Console.WriteLine("{" + name + "}" + " just entred with password: " + password);
+                            user = new User(name,id);
 
-                            MsgSendEvent += SendMessageToClients;
-                            VoiceMsgSendEvent += SendVoiceMessageToClients;
+                            MsgSendEvent += OnSendMessageToClients;
+                            VoiceMsgSendEvent += OnSendVoiceMessageToClients;
                             return name;
                         }
                         else
                         {
-                            string message = $"2:&#:unconfirmed:&#:{viewed}";
-                            byte[] buffer = Encoding.UTF8.GetBytes(message);
-                            stream.Write(buffer, 0, buffer.Length);
+                            Send(stream,"2", "unconfirmed", viewed.ToString());
                         }
                     }
                     if (viewed == 0)
                     {
-                        string message = $"2:&#:unconfirmed:&#:{viewed}";
-                        byte[] buffer = Encoding.UTF8.GetBytes(message);
-                        stream.Write(buffer, 0, buffer.Length);
+                        Send(stream, "2", "unconfirmed", viewed.ToString());
                     }
                 }
             }
@@ -213,14 +179,31 @@ namespace ChatServer
             FileStream fileM = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
             ser.Serialize(fileM, data);
             fileM.Close();
-                        
-            byte[] file = File.ReadAllBytes(path); 
+
+            SendFile(path,stream);
+        }
+
+        private void Send(NetworkStream stream, params string[] data)
+        {
+            string message = default;
+            foreach (string s in data)
+            {
+                message += $"{s}:&#:";
+            }
+            byte[] buffer = Encoding.UTF8.GetBytes(message);
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+        private void SendFile(string path, NetworkStream streamVoice)
+        {
+            int bufferSize = 1024;
+
+            byte[] file = File.ReadAllBytes(path);
             byte[] fileLength = BitConverter.GetBytes(file.Length); //4 байта
             byte[] package = new byte[4 + file.Length];
-            fileLength.CopyTo(package, 0); //сначаал пишем длину до 4 байта
-            file.CopyTo(package, 4); //начиная с 4 байта пишем файл
+            fileLength.CopyTo(package, 0);
+            file.CopyTo(package, 4); //начиная с 5 байта пишем файл
 
-            int bufferSize = 1024;
             int bytesSent = 0; //отталкиваемся с какого байта отправлять
             int bytesLeft = package.Length; //смотрим сколько осталось
 
@@ -229,7 +212,7 @@ namespace ChatServer
 
                 int packetSize = (bytesLeft > bufferSize) ? bufferSize : bytesLeft; //если больше отправляем 1024, если меньше то остаток
 
-                stream.Write(package, bytesSent, packetSize);
+                streamVoice.Write(package, bytesSent, packetSize);
                 bytesSent += packetSize;
                 bytesLeft -= packetSize;
             }
